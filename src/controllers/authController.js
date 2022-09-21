@@ -6,37 +6,33 @@ const { Op } = require('sequelize');
 const AppError = require('../utils/appError');
 const { User } = require('../models');
 
-// const { request } = require('express');
-
 const genToken = payload =>
   jwt.sign(payload, process.env.JWT_SECRET_KEY || 'private_key', {
     expiresIn: process.env.JWT_EXPIRES || '1d',
   });
 
 exports.register = async (req, res, next) => {
-  console.log(User);
   try {
     const { firstName, lastName, emailOrMobile, password, confirmPassword } =
       req.body;
 
     if (!emailOrMobile) {
-      //   res.status(400).json({ message: 'Email or mobile is required' });
-      throw new AppError('Email address or mobile is required', 400);
+      throw new AppError('email address or mobile is required', 400);
     }
 
     if (!password) {
-      throw new AppError('Password is required', 400);
+      throw new AppError('password is required', 400);
     }
 
     if (password !== confirmPassword) {
-      throw new AppError('Password and Confirm Password did not match', 400);
+      throw new AppError('password and confirm password did not match', 400);
     }
 
     const isEmail = validator.isEmail(emailOrMobile + '');
     const isMobile = validator.isMobilePhone(emailOrMobile + '');
 
     if (!isEmail && !isMobile) {
-      throw new AppError('Email address or mobile is invalid format', 400);
+      throw new AppError('email address or mobile is invalid format', 400);
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
@@ -47,8 +43,6 @@ exports.register = async (req, res, next) => {
       mobile: isMobile ? emailOrMobile : null,
       password: hashedPassword,
     });
-    console.log(firstName);
-    console.log(user);
 
     const token = genToken({ id: user.id });
     res.status(201).json({ token });
@@ -70,6 +64,7 @@ exports.login = async (req, res, next) => {
         [Op.or]: [{ email: emailOrMobile }, { mobile: emailOrMobile }],
       },
     });
+
     if (!user) {
       throw new AppError('email address or mobile or password is invalid', 400);
     }
@@ -78,9 +73,14 @@ exports.login = async (req, res, next) => {
     if (!isCorrect) {
       throw new AppError('email address or mobile or password is invalid', 400);
     }
+
     const token = genToken({ id: user.id });
     res.status(200).json({ token });
   } catch (err) {
     next(err);
   }
+};
+
+exports.getMe = (req, res) => {
+  res.status(200).json({ user: req.user });
 };
